@@ -53,7 +53,7 @@ if (String(web_app_serve_local) == 'true') {
 }
 
 //Shutdown handling
-const connections = []
+let connections = []
 
 server.on('connection', connection => {
     connections.push(connection)

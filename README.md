@@ -7,3 +7,5 @@ This project is only a demo using torre open data and tecnologies, but is not af
  - **web_app_serve_local** (true | false)
  - **web_app_relative_path** (relative path to serve the static content of the web app)
  - **web_app_entry_point** (name of the fontend entry point (index.html in most cases))
+ - **bio_profile_url** (Torre endpoint to fetch user profiles)
+ - **search_people_url** (Torre endpoint to search people)
