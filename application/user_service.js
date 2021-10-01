@@ -1,50 +1,56 @@
 const fetch = require('../common/fetch')
 const { bio_profile_url } = process.env
 const user_repository = require('../domain/user_repository')
-const user_organization_repository = require('../domain/user_organization_repository')
 
-const categories = ['jobs', 'education', 'projects']
+/**
+ * @typedef {import('./../domain/user_repository.js').User} User
+ */
 
-const getUser = async (username, getOrganization) => {
-    let user = await user_repository.getUser(username)
-    if (user) {
-        return user
-    }
-    return await registerUserFromTorre(username, getOrganization)
+/**
+ * @param {string} username 
+ * @param {(Function} getOrganization 
+ * @returns {Promise<User> | undefined} 
+ */
+const getUser = async (username) => {
+    return await user_repository.getUser(username)
 }
 
-const registerUserFromTorre = async (username, getOrganization) => {
+/**
+ * @param {string} username 
+ * @returns {Promise<[User, string[]]>} 
+ */
+const registerUserFromTorre = async (username) => {
     const user_bio = await fetch(`${bio_profile_url}/${username}`)
     const person = user_bio.person
     if (!person) {
-        return undefined
+        return []
     }
-    const user = await user_repository.insertUser({
+    const user = await registerUser({
         username: person.publicId,
         name: person.name,
         weight: person.weight,
         headline: person.professionalHeadline,
         photo: person.pictureThumbnail
     })
-    linkOrganizations(user, user_bio.experiences, getOrganization)
-    return user
-}
-
-const linkOrganizations = async (user, experiences, getOrganization) => {
     //Flatten the organizations where the user had infuence, removing repeated organizations
-    const organization_names = experiences
+    const categories = ['jobs', 'education', 'projects']
+    const organization_names = user_bio.experiences
         .filter(experience => categories.includes(experience.category))
         .reduce((organizations, experience) => organizations.concat(experience.organizations.map(organization => organization.name)), [])
         .filter((organization_name, index, names) => names.indexOf(organization_name) === index)
-    const organizations = await Promise.all(organization_names.map(getOrganization))
-    //Multi insert to improve performance
-    const user_organizations = organizations.map(organization => [
-        user.id,
-        organization.id
-    ])
-    user_organization_repository.insertUserOrganizations(user_organizations)
+    return [user, organization_names]
+}
+
+/** 
+ * @param {User} user
+ * @returns {User} 
+ */
+const registerUser = async (user) => {
+    return await user_repository.insertUser(user)
 }
 
 module.exports = {
-    getUser
+    getUser,
+    registerUserFromTorre,
+    registerUser
 }

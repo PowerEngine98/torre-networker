@@ -1,4 +1,4 @@
-DROP SCHEMA IF EXISTS networker CASCADE;
+--DROP SCHEMA IF EXISTS networker CASCADE;
 CREATE SCHEMA IF NOT EXISTS networker;
 ALTER USER postgres SET search_path = public, networker;
 SET SCHEMA 'networker';
@@ -9,14 +9,12 @@ CREATE TABLE IF NOT EXISTS "user"  (
 	"name"          varchar NOT NULL,
 	"weight"        numeric NOT NULL CHECK (weight >= 0),
 	"headline"      varchar NOT NULL,
-	"photo"         varchar,
-	"created_at" 	timestamp with time zone NOT NULL
+	"photo"         varchar
 );
 
-CREATE TABLE IF NOT EXISTS "organization"  ( 
+CREATE TABLE IF NOT EXISTS "organization"  (
 	"id"            SERIAL PRIMARY KEY,
-	"name"          varchar NOT NULL,
-	"created_at" 	timestamp with time zone NOT NULL
+	"name"          varchar NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS "user_organization"  (

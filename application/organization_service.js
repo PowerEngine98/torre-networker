@@ -1,65 +1,109 @@
-module.exports = {}
 const fetch = require('../common/fetch')
-const { getUser } = require('./user_service')
+const { getUser, registerUserFromTorre, registerUser } = require('./user_service')
 const organization_repository = require('../domain/organization_repository')
 const user_organization_repository = require('../domain/user_organization_repository')
 
 const { search_people_url } = process.env
 
+/**
+ * @typedef {import('./user_service.js').User} User
+ * @typedef {import('../domain/organization_repository.js').Organization} Organization
+ */
+
+/**
+ * @param {*} options 
+ * @returns {Organization[]}
+ */
 const getOrganizations = async (options) => {
     const {
         username,
         exclude_organizations
     } = options
-    const user = await getUser(username, getOrganization)
-    let organizations = await user_organization_repository.getOrganizationsByUserIdExcluding(user.id, exclude_organizations)
+    //Get or create a user to get his organizations
+    let user = await getUser(username)
+    let organizations
+    if (user) {
+        organizations = await user_organization_repository.getOrganizationsByUserIdExcluding(user.id, exclude_organizations)
+    }
+    else {
+        const [newUser, organization_names] = await registerUserFromTorre(username)
+        user = newUser
+        organizations = await organization_repository.linkUserToOrganizations(user.id, organization_names)
+    }
     options.exclude_users.push(user.username)
-    const search = new OrganizationSearch(organizations, options)
-    return await search.search()
+    return await new OrganizationSearch(organizations, options).search()
 }
 
+/**
+ * 
+ * @param {string} name 
+ * @returns {Organization}
+ */
 const getOrganization = async (name) => {
-    let organization = await organization_repository.getOrganization(name)
+    const organization = await organization_repository.getOrganization(name)
     if (organization) {
         return organization
     }
     return await organization_repository.insertOrganization({ name })
 }
 
+//Scope to track and stop the search
 class OrganizationSearch {
 
     constructor(organizations, options) {
-        console.log(options)
         this.organizations = organizations
-        this.exclude_users = options.exclude_users
+        this.exclude_users = new Set(options.exclude_users)
         this.limit = options.limit
         this.limit_per_organization = options.limit_per_organization
         this.total = 0
     }
 
     async search() {
-        for(const organization of this.organizations) {
-            const members = await this.getOrganizationUsers(organization)
-            if(members) {
-                organization.members = members
+        return new Promise(async (resolve, reject) => {
+            const onResult = (organization, user) => {
+                if (!organization.members) {
+                    organization.members = []
+                }
+                organization.members.push(user)
+                this.exclude_users.add(user.username)
+                this.total++
+                if (this.total >= this.limit) {
+                    resolve(this.organizations)
+                    return true
+                }
+                return false
             }
-        }
-        return this.organizations
+            try {
+                const promises = this.organizations.map(organization => this.getOrganizationUsers(organization, onResult))
+                await Promise.all(promises)
+                resolve(this.organizations)
+            } catch (error) {
+                reject(error)
+            }
+        })
     }
 
-    async getOrganizationUsers(organization) {
-        if (this.total >= this.limit) {
-            return []
+    /**
+    * Inserts a user to the database and create a relation with his organizations, makes faster future searchs, this ensures eventual consistency
+    * @param {User} user 
+    * @param {string[]} organization_names 
+    */
+    async registerAndLinkUser(user, organization_names) {
+        const existentUser = await getUser(user.username)
+        if (!existentUser) {
+            const newUser = await registerUser(user)
+            organization_repository.linkUserToOrganizations(newUser.id, organization_names)
         }
-        const users = await user_organization_repository.getUsersByOrganizationIdExcluding(organization.id, this.exclude_users)
-        users.forEach(user => {
-            this.total++
-            this.exclude_users.push(user.username)
-        })
-        if (this.total >= this.limit) {
-            return users
+    }
+
+    async getOrganizationUsers(organization, onResult) {
+        const users = await user_organization_repository.getUsersByOrganizationIdExcluding(organization.id, Array.from(this.exclude_users))
+        for (const user of users) {
+            if (onResult(organization, user)) {
+                return
+            }
         }
-        const search_result = await fetch(search_people_url, {
+        const search_result = await fetch(`${search_people_url}?size=${this.limit_per_organization}`, {
             method: 'post',
             body: {
                 organization: {
@@ -68,27 +112,26 @@ class OrganizationSearch {
             }
         })
         if (!search_result.results) {
-            return users
+            return
         }
         const results = search_result.results
-            .filter(result => !this.exclude_users.includes(result.username))
+            .filter(result => !this.exclude_users.has(result.username))
             .filter((result, index, results) => results.indexOf(result) === index)
             .sort((r1, r2) => r2.weight - r1.weight)
-            .slice(0, this.limit_per_organization)
-        results.forEach(r => {
-            this.exclude_users.push(r.username)
-        })
         for (let result of results) {
-            this.total++
-            const user = getUser(result.username, getOrganization)
-            users.push(result.username)
-            this.exclude_users.push(result.username)
-            console.log(this.total, result.username)
-            if (this.total >= this.limit) {
-                break
+            const user = {
+                username: result.username,
+                name: result.name,
+                weight: result.weight,
+                headline: result.professionalHeadline,
+                photo: result.picture
+            }
+            const organization_names = result._meta.filter.input.person.organizations
+            this.registerAndLinkUser(user, organization_names)
+            if (onResult(organization, user)) {
+                return
             }
         }
-        return users
     }
 
 }

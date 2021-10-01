@@ -8,7 +8,6 @@ const {
     handleError
 } = require('../common/api_error')
 
-
 router.get('/:username/', handleError(async (req, res) => {
     const username = req.params.username
     if (!username) {

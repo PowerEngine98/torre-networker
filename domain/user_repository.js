@@ -1,9 +1,23 @@
 const database = require('../common/database')
 
+/**
+ * @typedef User
+ * @property {number} id
+ * @property {string} username
+ * @property {string} name
+ * @property {number} weight
+ * @property {string} headline
+ * @property {string} photo
+ */
+
+/**
+ * @param {User} user
+ * @returns {Promise<User>} 
+ */
 const insertUser = async (user) => {
     const query = {
         name: 'insert-user',
-        text: 'INSERT INTO "user"(username, name, weight, headline, photo, created_at) VALUES($1, $2, $3, $4, $5, NOW()) RETURNING *'
+        text: 'INSERT INTO "user"(username, name, weight, headline, photo) VALUES($1, $2, $3, $4, $5) RETURNING *'
     }
     query.values = [
         user.username,
@@ -16,6 +30,10 @@ const insertUser = async (user) => {
     return response.rows[0]
 }
 
+/**
+ * @param {string} username
+ * @returns {Promise<User>} 
+ */
 const getUser = async (username) => {
     const query = {
         name: 'get-user',
@@ -28,6 +46,10 @@ const getUser = async (username) => {
     return response.rows?.[0]
 }
 
+/**
+ * @param {number} id
+ * @returns {Promise<User>} 
+ */
 const getUserById = async (id) => {
     const query = {
         name: 'get-user-id',
