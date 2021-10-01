@@ -65,6 +65,7 @@ const ErrorCode = {
 class ApiError extends Error {
 
     constructor(errorCode, errorMessage) {
+        super(errorMessage)
         this.errorCode = errorCode
         this.errorMessage = errorMessage
     }
@@ -79,4 +80,23 @@ class ApiError extends Error {
     
 }
 
-module.exports = { ApiError, ErrorCode }
+const handleError = (targetFunction) => {
+    return async (req, res, next) => {
+        try {
+            await targetFunction(req, res, next)
+        }
+        catch (error) {
+            console.error(error)
+            const errorResponse = {
+                message: error.message,
+                statusCode: ErrorCode.INTERNAL_SERVER_ERROR
+            }
+            if (error instanceof ApiError) {
+                errorResponse.statusCode = error.code
+            }
+            res.status(errorResponse.statusCode).json(errorResponse)
+        }
+    }
+}
+
+module.exports = { ApiError, ErrorCode, handleError }
