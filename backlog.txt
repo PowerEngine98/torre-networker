@@ -1,0 +1,29 @@
+29-09
+12:05 Reading instructions and checking the enpoints
+12:15 Quick whiteboard sketch of the app and brainstorming
+12:30 Github backend repository created, thinking about the project architecture
+12:50 Github frontend repository created
+13:00 Lunch break, also thinking how to implement the features (as a background task while i eat)
+13:32 Returning from lunch break, ready to test the given Torre endpoints from backend
+14:42 Done writting backend initial scafolding, aiming towards a simple hexagonal architecture
+15:00 Started development server to test the first endpoint and get a user bio (genome)
+17:00 Setup backend database (PostgreSQL) locally to save some cache results and eventually speed up the response time of the endpoints
+19:00 Modified file structure in backend to match the original hexagonal goal, also implemented organization endpoints
+20:00 Created database initial script and resource repositories
+21:00 Testing and debugging the operations on the database for  
+22:00 Going to sleep.
+30-09
+12:00 Testing and benchmark of backend endpoints, now focusing on improve the response time
+13:00 The backend is almost done, only making some tweaks from now 
+22:00 I had to do some repair work on my house. That took me all day, i'm gonna start to work on frontend this night
+23:00 I made some code cleanup and optimizations to backend
+00:00 Im happy with the performance of the backend by now. moving on to front (finally)
+02:00 Started frontend project, setting up tailwind jit as my css framework
+01-10
+09:00 Working on frontend, building a PWA
+10:00 Sketching some mockups to start creating the components
+13:00 Implementing more components
+17:00 Testing frontend with backend
+20:00 Debugging graph interactions
+02-10 
+08:00 Making a simple deploy in a dedicated machine i own that happens to have all the things already installed

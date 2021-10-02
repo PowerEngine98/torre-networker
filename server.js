@@ -27,3 +27,9 @@ app.use((req, res, next) => {
 
 //Define route of controller layer
 app.use('/api', require('./infraestructure/api_controller'))
+
+app.use(express.static('public'))
+
+app.get('/**', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'))
+})
