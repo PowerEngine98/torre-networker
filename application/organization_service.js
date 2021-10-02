@@ -30,7 +30,7 @@ const getOrganizations = async (options) => {
         user = newUser
         organizations = await organization_repository.linkUserToOrganizations(user.id, organization_names)
     }
-    options.exclude_users.push(user.username)
+    options.exclude_users.push(username)
     return await new OrganizationSearch(organizations, options).search()
 }
 
@@ -98,6 +98,9 @@ class OrganizationSearch {
 
     async getOrganizationUsers(organization, onResult) {
         const users = await user_organization_repository.getUsersByOrganizationIdExcluding(organization.id, Array.from(this.exclude_users))
+        if (users.length > 0) {
+            await user_organization_repository.getOrganizationNamesOfUsers(users)
+        }
         for (const user of users) {
             if (onResult(organization, user)) {
                 return
@@ -119,14 +122,15 @@ class OrganizationSearch {
             .filter((result, index, results) => results.indexOf(result) === index)
             .sort((r1, r2) => r2.weight - r1.weight)
         for (let result of results) {
+            const organization_names = result._meta.filter.input.person.organizations
             const user = {
                 username: result.username,
                 name: result.name,
                 weight: result.weight,
                 headline: result.professionalHeadline,
-                photo: result.picture
+                photo: result.picture,
+                organizations: organization_names
             }
-            const organization_names = result._meta.filter.input.person.organizations
             this.registerAndLinkUser(user, organization_names)
             if (onResult(organization, user)) {
                 return

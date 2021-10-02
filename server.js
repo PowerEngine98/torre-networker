@@ -19,5 +19,11 @@ app.listen(app_port, () => {
     database.connect()
 })
 
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*')
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+    next()
+})
+
 //Define route of controller layer
 app.use('/api', require('./infraestructure/api_controller'))

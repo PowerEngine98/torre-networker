@@ -40,7 +40,14 @@ const getUserOrganizationsByUserId = async (user_id) => {
  * @returns {Organization[]} 
  */
 const getOrganizationsByUserIdExcluding = async (user_id, not_in) => {
-    const query = format('SELECT o.* FROM user_organization AS uo INNER JOIN organization AS o ON uo.organization_id = o.id WHERE uo.user_id = %s AND o.id NOT IN (%s)', user_id, not_in)
+    let query = 'SELECT o.* FROM user_organization AS uo INNER JOIN organization AS o ON uo.organization_id = o.id WHERE uo.user_id = %s'
+    if (not_in.length > 0) {
+        query += ' AND o.id NOT IN (%s)'
+        query = format(query, user_id, not_in)
+    }
+    else {
+        query = format(query, user_id)
+    }
     const response = await database.query(query)
     return response.rows
 }
@@ -51,14 +58,35 @@ const getOrganizationsByUserIdExcluding = async (user_id, not_in) => {
  * @returns {User[]} 
  */
 const getUsersByOrganizationIdExcluding = async (organization_id, not_in) => {
-    const query = format('SELECT u.* FROM user_organization AS uo INNER JOIN "user" AS u ON uo.user_id = u.id WHERE uo.organization_id = %s AND u.username NOT IN (%L)', organization_id, not_in)
+    let query = 'SELECT u.* FROM user_organization AS uo INNER JOIN "user" AS u ON uo.user_id = u.id WHERE uo.organization_id = %s'
+    if (not_in.length > 0) {
+        query += ' AND u.username NOT IN (%L)'
+        query = format(query, organization_id, not_in)
+    }
+    else {
+        query = format(query, organization_id)
+    }
     const response = await database.query(query)
     return response.rows
+}
+
+/**
+ * @param {User[]} users 
+ */
+ const getOrganizationNamesOfUsers = async (users) => {
+     database.transaction(async (client) => {
+        for(const user of users) {
+            const response = await client.query('SELECT o.name FROM user_organization AS uo INNER JOIN organization AS o ON uo.organization_id = o.id WHERE uo.user_id = $1', [user.id])
+            const organization_names = response.rows.map(row => row.name) 
+            user.organizations =  organization_names
+        }
+     })
 }
 
 module.exports = {
     insertUserOrganizations,
     getUserOrganizationsByUserId,
     getOrganizationsByUserIdExcluding,
-    getUsersByOrganizationIdExcluding
+    getUsersByOrganizationIdExcluding,
+    getOrganizationNamesOfUsers
 }
